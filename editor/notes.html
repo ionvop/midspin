@@ -1,0 +1,158 @@
+<html>
+    <head>
+        <title>
+            Editor
+        </title>
+        <style>
+            body {
+                margin: 0rem;
+            }
+
+            textarea {
+                font-size: 1.5rem;
+                width: 100%;
+                height: 4rem;
+                padding: 1rem;
+                resize: none;
+            }
+
+            input {
+                font-size: 1.5rem;
+                padding: 1rem;
+            }
+
+            .main .page > .content {
+                padding: 5rem;
+                font-size: 1.5rem;
+            }
+
+            .main .info-panel > .details {
+                font-size: 1.5rem;
+                line-height: 150%;
+                font-family: 'Courier New', Courier, monospace;
+                font-weight: bold;
+            }
+
+            .main .info-panel > input[name="orbit"] {
+                margin-top: 3rem;
+                width: 50%;
+            }
+
+            .main .content > .container {
+                display: grid;
+                grid-template-columns: 30% auto;
+            }
+
+            .main .container > textarea[name="script"] {
+                height: 23rem;
+            }
+
+            .main .content > textarea[name="result"] {
+                margin-top: 3rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="page">
+                <div class="content">
+                    <div class="container">
+                        <div class="info-panel">
+                            <div class="details">
+                                BPM = 120<br>
+                                Current time = 0<br>
+                                Current angle = 0<br>
+                                Current mod angle = 0<br>
+                            </div>
+                            <input name="orbit" type="number" value="1">
+                        </div>
+                        <textarea name="script" onkeyup="Compile()" onpointerup="Compile()"></textarea>
+                    </div>
+                    <textarea name="result"></textarea>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        function Compile() {
+            let fumen = [];
+            let bpm = 120;
+            let interval = 2000;
+            let offset = 0;
+            let time = 0;
+            let result = "";
+            let b = SetBpm;
+            let o = SetOffset;
+            let a = AddNote;
+            let p = SetPosition;
+            let angles = {};
+
+            function UpdateAngles(orbit) {
+                if (angles[orbit] == undefined) {
+                    angles[orbit] = 0;
+                }
+            }
+
+            function SetBpm(input) {
+                bpm = input;
+                interval = (240 / bpm) * 1000;
+            }
+
+            function SetOffset(input) {
+                offset = input;
+                time = input;
+            }
+
+            function AddNote(measure = 4, type = 2, ease = 1, orbit = 1) {
+                UpdateAngles(orbit);
+
+                fumen.push([Math.floor(time), orbit, type, angles[orbit], ease]);
+                time += interval / Math.abs(measure);
+
+                if (measure < 0) {
+                    angles[orbit] -= 360 / Math.abs(measure);
+                } else {
+                    angles[orbit] += 360 / measure;
+                }
+            }
+
+            function SetPosition(settime = time, orbit, angle) {
+                time = settime;
+                
+                if (orbit != undefined && angle != undefined) {
+                    angles[orbit] = angle;
+                }
+            }
+
+            try {
+                eval(document.querySelector('.main .container > textarea[name="script"]').value.replaceAll(".,", "undefined,"));
+                
+                fumen.sort((inp, com) => {
+                    return inp[0] - com[0];
+                });
+                
+                document.querySelector('.main .content > textarea[name="result"]').value = JSON.stringify(fumen);
+            } catch (error) {
+                document.querySelector('.main .content > textarea[name="result"]').value = error.message;
+            } finally {
+                angles = {};
+                document.querySelector('.main .content > textarea[name="result"]').style.height = "1px";
+                document.querySelector('.main .content > textarea[name="result"]').style.height = document.querySelector('.main .content > textarea[name="result"]').scrollHeight + 3 + "px";
+                let script = document.querySelector('.main .container > textarea[name="script"]').value;
+                script = script.substring(0, document.querySelector('.main .container > textarea[name="script"]').selectionStart);
+                script = script.substring(0, script.lastIndexOf(";"));
+                script = script.replaceAll(".,", "undefined,");
+                eval(script);
+                
+                document.querySelector(".main .info-panel > .details").innerHTML = `
+                    BPM = ${bpm}<br>
+                    Current time = ${Math.floor(time)}<br>
+                    Current angle = ${angles[document.querySelector('.main .info-panel > input[name="orbit"]').value]}<br>
+                    Current mod angle = ${angles[document.querySelector('.main .info-panel > input[name="orbit"]').value] % 360}
+                `;
+
+                document.querySelector(".main .page").style.height = "";
+            }
+        }
+    </script>
+</html>
